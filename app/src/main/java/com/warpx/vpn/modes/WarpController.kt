@@ -2,9 +2,10 @@ package com.warpx.vpn.modes
 
 import android.content.Context
 import com.warpx.vpn.VpnState
-import com.wireguard.android.backend.GoBackend
-import com.wireguard.android.backend.Tunnel
-import com.wireguard.config.Config
+import org.amnezia.awg.backend.GoBackend
+import org.amnezia.awg.backend.NoopTunnelActionHandler
+import org.amnezia.awg.backend.Tunnel
+import org.amnezia.awg.config.Config
 
 object WarpController {
     @Volatile
@@ -14,12 +15,12 @@ object WarpController {
     private var tunnel: Tunnel? = null
 
     fun connect(context: Context, conf: String) {
-        val b = GoBackend(context)
+        val b = GoBackend(context, NoopTunnelActionHandler())
         val cfg = Config.parse(conf.byteInputStream())
         val t = object : Tunnel {
             override fun getName(): String = "warp"
             override fun onStateChange(newState: Tunnel.State) {
-                VpnState.log("Warp: ${newState.name}")
+                VpnState.log("AWG: ${newState.name}")
             }
         }
         backend = b
@@ -33,7 +34,7 @@ object WarpController {
         try {
             b.setState(t, Tunnel.State.DOWN, null)
         } catch (e: Exception) {
-            VpnState.log("Warp stop: ${e.message}")
+            VpnState.log("AWG stop: ${e.message}")
         }
         backend = null
         tunnel = null
