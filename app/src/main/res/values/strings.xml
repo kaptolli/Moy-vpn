@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">WarpX</string>
+    <string name="mode_warp">1 · Warp (WireGuard)</string>
+    <string name="mode_dpi">2 · DPI-обход (byebyedpi)</string>
+    <string name="mode_whitelist">3 · Обход белого списка</string>
+    <string name="mode_block">4 · Блокировка (flowseal)</string>
+    <string name="btn_connect">Подключить</string>
+    <string name="btn_disconnect">Отключить</string>
+    <string name="btn_autotest">Автотест стратегий</string>
+    <string name="btn_import">Импорт Warp-профиля</string>
+</resources>
