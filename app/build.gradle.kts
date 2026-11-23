@@ -39,11 +39,19 @@ android {
     }
 }
 
+// AmneziaWG тянет androidx.core:1.17.0 (нужен compileSdk 36). Фиксируем на совместимых.
+configurations.all {
+    resolutionStrategy {
+        force("androidx.core:core:1.13.1")
+        force("androidx.core:core-ktx:1.13.1")
+        force("androidx.collection:collection:1.4.0")
+    }
+}
+
 dependencies {
-    implementation("androidx.core:core-ktx:1.12.0")
+    implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("com.google.android.material:material:1.11.0")
     implementation("com.squareup.okhttp3:okhttp:5.3.0")
-    // AmneziaWG (обфусцированный WireGuard) — нативное ядро внутри AAR
     implementation("com.zaneschepke:amneziawg-android:2.3.7")
 }
