@@ -16,8 +16,8 @@ object DoH {
     private val client = OkHttpClient.Builder()
         .connectTimeout(8, TimeUnit.SECONDS)
         .readTimeout(8, TimeUnit.SECONDS)
-        .dns(Dns { hostname ->
-            when {
+        .dns(object : Dns {
+            override fun lookup(hostname: String): List<InetAddress> = when {
                 hostname.contains("dns.google") -> listOf(InetAddress.getByName("8.8.8.8"))
                 hostname.contains("cloudflare") -> listOf(InetAddress.getByName("1.1.1.1"))
                 else -> Dns.SYSTEM.lookup(hostname)
