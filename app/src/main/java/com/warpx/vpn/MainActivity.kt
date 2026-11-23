@@ -29,6 +29,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvLog: TextView
     private lateinit var rg: RadioGroup
     private lateinit var spProfile: Spinner
+    private var fullSweep = false
 
     private val vpnLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { res ->
@@ -50,7 +51,7 @@ class MainActivity : AppCompatActivity() {
         tvLog = findViewById(R.id.tvLog)
         rg = findViewById(R.id.rgMode)
         spProfile = findViewById(R.id.spProfile)
-        rg.check(R.id.rbDpi)
+        rg.check(R.id.rbWarp)
 
         tvLog.text = VpnState.all()
         VpnState.listener = { line -> runOnUiThread { tvLog.append("\n" + line) } }
@@ -71,9 +72,7 @@ class MainActivity : AppCompatActivity() {
                 id: Long
             ) {
                 val adapter = parent?.adapter as? ArrayAdapter<*> ?: return
-                if (position >= 0 && position < adapter.count) {
-                    adapter.getItem(position)?.toString()?.let { Store.setActive(this@MainActivity, it) }
-                }
+                adapter.getItem(position)?.toString()?.let { Store.setActive(this@MainActivity, it) }
             }
 
             override fun onNothingSelected(parent: android.widget.AdapterView<*>?) { }
@@ -93,7 +92,6 @@ class MainActivity : AppCompatActivity() {
         val active = Store.activeName(this)
         val idx = names.indexOf(active)
         if (idx >= 0) spProfile.setSelection(idx)
-        if (names.isEmpty()) VpnState.log("Профилей Warp нет — импортируй .conf")
     }
 
     private fun selectedMode(): ModeType = when (rg.checkedRadioButtonId) {
@@ -103,8 +101,8 @@ class MainActivity : AppCompatActivity() {
         else -> ModeType.DPI
     }
 
-    private fun requestVpn() {
-        val m = selectedMode()
+    private fun requestVpn(forceWarp: Boolean = false) {
+        val m = if (forceWarp) ModeType.WARP else selectedMode()
         Mode.current = m
         if (m == ModeType.WARP && Store.listProfiles(this).isEmpty()) {
             Toast.makeText(this, "Сначала импортируй Warp-профили", Toast.LENGTH_LONG).show()
@@ -118,21 +116,10 @@ class MainActivity : AppCompatActivity() {
         when (Mode.current) {
             ModeType.WARP -> {
                 val profiles = Store.listProfiles(this)
-                val name = Store.activeName(this)
-                val p = profiles.firstOrNull { it.name == name } ?: profiles.firstOrNull()
-                if (p == null) {
-                    VpnState.log("Нет профилей")
-                    return
-                }
-                Thread {
-                    try {
-                        WarpController.connect(this, p.conf)
-                        setStatus(true)
-                    } catch (e: Exception) {
-                        VpnState.log("Warp ошибка: ${e.message}")
-                        setStatus(false)
-                    }
-                }.start()
+                val startIdx = if (fullSweep) 0
+                else profiles.indexOfFirst { it.name == Store.activeName(this) }.coerceAtLeast(0)
+                fullSweep = false
+                probeAndConnect(startIdx)
             }
             else -> {
                 val svc = Intent(this, LocalVpnService::class.java)
@@ -141,6 +128,54 @@ class MainActivity : AppCompatActivity() {
                 setStatus(true)
             }
         }
+    }
+
+    // Перебирает профили по порядку и подключается к первому рабочему.
+    private fun probeAndConnect(startIndex: Int) {
+        val profiles = Store.listProfiles(this)
+        if (profiles.isEmpty()) {
+            VpnState.log("Нет профилей")
+            setStatus(false)
+            return
+        }
+        val start = if (startIndex in profiles.indices) startIndex else 0
+        val ordered = profiles.drop(start) + profiles.take(start)
+        Thread {
+            VpnState.log("Проверка ${ordered.size} профилей…")
+            var n = 0
+            for (p in ordered) {
+                n++
+                VpnState.log("Проверка $n/${ordered.size}: ${p.name}")
+                try {
+                    WarpController.connect(this, p.conf)
+                } catch (e: Exception) {
+                    VpnState.log("✗ ${p.name}: ${e.message} → следующая")
+                    try { WarpController.disconnect() } catch (_: Exception) { }
+                    continue
+                }
+                var ok = false
+                for (i in 0 until 2) {
+                    Thread.sleep(1500)
+                    if (testInternet()) { ok = true; break }
+                }
+                if (ok) {
+                    Store.setActive(this, p.name)
+                    runOnUiThread { refreshProfileSpinner() }
+                    VpnState.log("✅ ${p.name} работает — подключено")
+                    setStatus(true)
+                    return@Thread
+                }
+                VpnState.log("✗ ${p.name} не работает → следующая")
+                try { WarpController.disconnect() } catch (_: Exception) { }
+            }
+            VpnState.log("Рабочих профилей не найдено")
+            setStatus(false)
+        }.start()
+    }
+
+    private fun rotateProfiles() {
+        fullSweep = true
+        requestVpn(forceWarp = true)
     }
 
     private fun disconnect() {
@@ -158,56 +193,16 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun rotateProfiles() {
-        val profiles = Store.listProfiles(this)
-        if (profiles.isEmpty()) {
-            VpnState.log("Нет профилей для перебора")
-            return
+    private fun testInternet(): Boolean {
+        for (host in listOf("1.1.1.1", "8.8.8.8")) {
+            try {
+                val s = Socket()
+                s.connect(InetSocketAddress(host, 443), 3500)
+                s.close()
+                return true
+            } catch (e: Exception) { }
         }
-        Mode.current = ModeType.WARP
-        val prep = VpnService.prepare(this)
-        if (prep != null) {
-            vpnLauncher.launch(prep)
-            return
-        }
-        Thread {
-            VpnState.log("Перебор ${profiles.size} профилей…")
-            for (p in profiles) {
-                VpnState.log("→ ${p.name}")
-                try {
-                    WarpController.connect(this, p.conf)
-                } catch (e: Exception) {
-                    VpnState.log("✗ ${p.name}: ${e.message}")
-                    try { WarpController.disconnect() } catch (_: Exception) { }
-                    continue
-                }
-                var ok = false
-                for (i in 0 until 2) {
-                    Thread.sleep(1500)
-                    if (testInternet()) { ok = true; break }
-                }
-                if (ok) {
-                    Store.setActive(this, p.name)
-                    runOnUiThread { refreshProfileSpinner() }
-                    VpnState.log("✅ Работает: ${p.name}")
-                    setStatus(true)
-                    return@Thread
-                }
-                VpnState.log("✗ ${p.name} не отвечает")
-                try { WarpController.disconnect() } catch (_: Exception) { }
-            }
-            VpnState.log("Ни один профиль не сработал")
-            setStatus(false)
-        }.start()
-    }
-
-    private fun testInternet(): Boolean = try {
-        val s = Socket()
-        s.connect(InetSocketAddress("1.1.1.1", 443), 4000)
-        s.close()
-        true
-    } catch (e: Exception) {
-        false
+        return false
     }
 
     private fun runAutotest() {
@@ -223,7 +218,7 @@ class MainActivity : AppCompatActivity() {
             try {
                 val text = contentResolver.openInputStream(uri)?.bufferedReader()?.readText() ?: continue
                 if (!text.contains("[Interface]")) {
-                    VpnState.log("Пропуск ${uri.lastPathSegment}: не WireGuard .conf")
+                    VpnState.log("Пропуск ${uri.lastPathSegment}: не .conf")
                     continue
                 }
                 val name = (uri.lastPathSegment ?: "profile").substringAfterLast('/')
@@ -233,7 +228,7 @@ class MainActivity : AppCompatActivity() {
                 VpnState.log("Ошибка ${uri.lastPathSegment}: ${e.message}")
             }
         }
-        VpnState.log("Импортировано профилей: $ok")
+        VpnState.log("Импортировано: $ok")
         refreshProfileSpinner()
         Toast.makeText(this, "Импортировано: $ok", Toast.LENGTH_SHORT).show()
     }

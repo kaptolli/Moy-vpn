@@ -22,10 +22,9 @@ object WarpController {
                 VpnState.log("Warp: ${newState.name}")
             }
         }
-        b.setState(t, Tunnel.State.UP, cfg)
         backend = b
         tunnel = t
-        VpnState.log("Warp: подключено")
+        b.setState(t, Tunnel.State.UP, cfg)
     }
 
     fun disconnect() {
@@ -38,6 +37,5 @@ object WarpController {
         }
         backend = null
         tunnel = null
-        VpnState.log("Warp: отключено")
     }
 }
