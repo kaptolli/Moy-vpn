@@ -25,10 +25,25 @@ object Store {
         val list = listProfiles(ctx).toMutableList()
         list.removeAll { it.name == name }
         list.add(WarpProfile(name, conf))
+        save(ctx, list)
+    }
+
+    fun removeProfile(ctx: Context, name: String) {
+        val list = listProfiles(ctx).toMutableList()
+        list.removeAll { it.name == name }
+        save(ctx, list)
+        if (activeName(ctx) == name) prefs(ctx).edit().remove("active_profile").apply()
+    }
+
+    private fun save(ctx: Context, list: List<WarpProfile>) {
         val arr = JSONArray()
-        for (p in list) {
-            arr.put(JSONObject().put("name", p.name).put("conf", p.conf))
-        }
+        for (p in list) arr.put(JSONObject().put("name", p.name).put("conf", p.conf))
         prefs(ctx).edit().putString("warp_profiles", arr.toString()).apply()
     }
+
+    fun setActive(ctx: Context, name: String) {
+        prefs(ctx).edit().putString("active_profile", name).apply()
+    }
+
+    fun activeName(ctx: Context): String? = prefs(ctx).getString("active_profile", null)
 }

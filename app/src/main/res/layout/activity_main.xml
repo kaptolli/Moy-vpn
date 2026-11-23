@@ -35,25 +35,25 @@
                 android:id="@+id/rbWarp"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/mode_warp" />
+                android:text="1 · Warp (WireGuard)" />
 
             <RadioButton
                 android:id="@+id/rbDpi"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/mode_dpi" />
+                android:text="2 · DPI-обход (byebyedpi)" />
 
             <RadioButton
                 android:id="@+id/rbWhitelist"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/mode_whitelist" />
+                android:text="3 · Обход белого списка" />
 
             <RadioButton
                 android:id="@+id/rbBlock"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/mode_block" />
+                android:text="4 · Блокировка (flowseal)" />
         </RadioGroup>
 
         <LinearLayout
@@ -67,7 +67,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="@string/btn_connect" />
+                android:text="Подключить" />
 
             <Button
                 android:id="@+id/btnDisconnect"
@@ -75,22 +75,43 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:layout_marginStart="8dp"
-                android:text="@string/btn_disconnect" />
+                android:text="Отключить" />
         </LinearLayout>
 
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Профиль Warp:"
+            android:textSize="13sp"
+            android:alpha="0.8" />
+
+        <Spinner
+            android:id="@+id/spProfile"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp" />
+
         <Button
-            android:id="@+id/btnAutotest"
+            android:id="@+id/btnRotate"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="@string/btn_autotest" />
+            android:text="Авто-перебор профилей" />
 
         <Button
             android:id="@+id/btnImport"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="@string/btn_import" />
+            android:text="Импорт профилей (.conf, можно много)" />
+
+        <Button
+            android:id="@+id/btnAutotest"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Автотест стратегий" />
 
         <TextView
             android:id="@+id/tvStatus"
