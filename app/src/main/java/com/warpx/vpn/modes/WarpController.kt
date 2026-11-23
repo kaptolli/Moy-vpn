@@ -22,6 +22,8 @@ object WarpController {
             override fun onStateChange(newState: Tunnel.State) {
                 VpnState.log("AWG: ${newState.name}")
             }
+            override fun isIpv4ResolutionPreferred(): Boolean = false
+            override fun isMetered(): Boolean = false
         }
         backend = b
         tunnel = t
