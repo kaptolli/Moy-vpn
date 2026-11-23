@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "com.warpx.vpn"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.warpx.vpn"
@@ -36,15 +36,6 @@ android {
 
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
-    }
-}
-
-// AmneziaWG тянет androidx.core:1.17.0 (нужен compileSdk 36). Фиксируем на совместимых.
-configurations.all {
-    resolutionStrategy {
-        force("androidx.core:core:1.13.1")
-        force("androidx.core:core-ktx:1.13.1")
-        force("androidx.collection:collection:1.4.0")
     }
 }
 
